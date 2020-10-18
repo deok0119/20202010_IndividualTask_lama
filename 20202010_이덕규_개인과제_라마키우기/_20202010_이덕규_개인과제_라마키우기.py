@@ -6,7 +6,7 @@ import random
 home=Scene("", "이미지/배경/배경_0.png")
 scene0=Scene("시작하기 전 잠깐!", "이미지/배경/설명.png")
 scene1=Scene("", "이미지/배경/배경_0.png")
-ending=Scene("", "이미지/엔딩/heaven_0.png")
+ending=Scene("", "이미지/엔딩/암막.png")
 
 gameover=Object("이미지/배경/게임종료.png")
 
@@ -184,6 +184,7 @@ def lama_move_timer_onTimeout():        ## 이동하면서 성공/실패 여부 
     global sad
     global hungry
     global dirty
+    global bgm_scene1
 
     if  sad==0 and hungry==0 and dirty==0:
         if now_level==2:        #<--------------------성공 조건
@@ -209,6 +210,10 @@ def lama_move_timer_onTimeout():        ## 이동하면서 성공/실패 여부 
             dirty_timer.set(20)
 
             lama_move_timer.start()
+
+            bgm_scene1.stop()
+            bgm_scene1=Sound(bgm_level[now_level])  #<-----bgm 전환(2차 커밋)
+            bgm_scene1.play(True)
 
     elif sad==6 or hungry==6 or dirty==6: #<--------------------실패조건
         fail()
@@ -264,6 +269,8 @@ def heart_effect():
 heart_effect_timer.onTimeout=heart_effect
 
 #_________________행복도 관련________________#
+sound_gage=Sound("음악/게이지.mp3")
+
 sad_timer=Timer(20)
 def sad_timer_onTimeout():
     global sad
@@ -271,6 +278,7 @@ def sad_timer_onTimeout():
     sad+=1
     happy.setImage(happy_image[sad])
     happy.show()
+    sound_gage.play(False)
 
     sad_timer.set(20)
     sad_timer.start()
@@ -289,6 +297,7 @@ def hungry_timer_onTimeout():
     hungry+=1
     food.setImage(food_image[hungry])
     food.show()
+    sound_gage.play(False)
 
     hungry_timer.set(20)
     hungry_timer.start()
@@ -299,7 +308,7 @@ def hungry_cooltimer_onTimeout():
     hungry_timer.start()
 hungry_cooltimer.onTimeout=hungry_cooltimer_onTimeout
 
-
+sound_lamatouch=Sound("음악/라마터치.mp3")
 fruit_timer=Timer(0)
 handling_count=0
 def feed_and_handling(x, y, action):         ##쓰다듬기&먹이주기 같이 있음
@@ -313,6 +322,7 @@ def feed_and_handling(x, y, action):         ##쓰다듬기&먹이주기 같이 
     global hungry
 
     if fruit.inHand() and hungry>0:
+        sound_lamatouch.play(False)
         if hungry==1:
             hungry-=1
             food.setImage(food_image[hungry])
@@ -339,11 +349,13 @@ def feed_and_handling(x, y, action):         ##쓰다듬기&먹이주기 같이 
         hungry_cooltimer.start()
 
     elif hand.inHand() and heart_effect_now==False and sad>0:
+        sound_lamatouch.play(False)
         handling_count+=1
         if handling_count%5==0:
             sad-=1
             happy.setImage(happy_image[sad])
             happy.show()
+            sound_gage.play(False)
 
         heart_effect_count=10
         heart_effect_now=True
@@ -358,14 +370,17 @@ lama.onMouseAction=feed_and_handling
 
 def fruit_pick(x, y, action):
     fruit.pick()
+    sound_pick.play(False)
 fruit.onMouseAction=fruit_pick
 
+sound_respon=Sound("음악/열매.mp3")
 def fruit_respon():
     global fruit_random
 
     fruit_random=random.randint(0, 4)
     fruit.locate(scene1, fruit_location[fruit_random][0], fruit_location[fruit_random][1])
     fruit.show()
+    sound_respon.play(False)
 fruit_timer.onTimeout=fruit_respon
 
 #_________________청결도 관련________________#
@@ -377,6 +392,7 @@ def clean_timer_onTimeout():
         dirty-=1
         clean.setImage(clean_image[dirty])
         clean.show()
+        sound_gage.play(False)
         
     clean_timer.set(10)
     clean_timer.start()
@@ -390,24 +406,29 @@ def dirty_timer_onTimeout():
         dirty+=1
         clean.setImage(clean_image[dirty])
         clean.show()
+        sound_gage.play(False)
         
     dirty_timer.set(20)
     dirty_timer.start()
 dirty_timer.onTimeout=dirty_timer_onTimeout
 
+sound_poop=Sound("음악/배변.mp3")
 poop_timer=Timer(20)
 def poop_timer_onTimeout():
     poop.locate(scene1, lama_location[0], lama_location[1])
     poop.show()
+    sound_poop.play(False)
 
     clean_timer.stop()
     dirty_timer.set(20)
     dirty_timer.start()
 poop_timer.onTimeout=poop_timer_onTimeout
 
+sound_pick=Sound("음악/줍기.mp3")
 def brooming(x, y, action):
     if broom.inHand():
         poop.hide()
+        sound_pick.play(False)
         clean_timer.start()
         dirty_timer.stop()
 
@@ -425,7 +446,53 @@ ending_angel=Object(angel_image[0])
 angel_scale=1
 now_angel=False
 
+ending_message=Object("이미지/엔딩/엔딩메세지.png")
+ending_message.locate(ending, 203, 214)
+
 #_________________성공 시 엔딩 관련_______________#
+def complete():
+    sad_timer.stop()
+    sad_cooltimer.stop()
+    hungry_timer.stop()
+    hungry_cooltimer.stop()
+    clean_timer.stop()
+    dirty_timer.stop()
+    poop_timer.stop()
+    fruit_timer.stop()
+    lama_motion_timer.stop()
+    heart_effect_timer.stop()
+
+    ending.enter()
+    ending.setLight(0)
+    ending_fade.start()
+    ending_message.show()
+now_ending_light=0
+ending.setLight(now_ending_light)
+
+fade_cnt=0
+ending_fade=Timer(0.1)
+def fade_io():
+    global now_ending_light
+    global fade_cnt
+    fade_cnt+=1
+
+    if fade_cnt<=10:
+        now_ending_light+=0.1
+    elif fade_cnt>90:
+        if fade_cnt==100:
+            ending.setLight(1)
+            ending_message.hide()
+            ending_timer.start()
+            angel_timer.start()
+            return
+        now_ending_light-=0.1
+
+    ending.setLight(now_ending_light)
+
+    ending_fade.set(0.1)
+    ending_fade.start()
+ending_fade.onTimeout=fade_io
+
 ending_timer=Timer(0.05)
 def ending_background():
     global now_ending
@@ -446,6 +513,7 @@ def angel_timer_onTimeout():
     global angel_location
     global now_angel
     global angel_scale
+    global bgm_ending
 
     if angel_location[1]<450:
         angel_scale*=0.99
@@ -458,6 +526,10 @@ def angel_timer_onTimeout():
         ending.setImage("이미지/엔딩/암막.png")
         ending_angel.hide()
         ending_timer.stop()
+        bgm_ending.stop()
+        bgm_ending=Sound("음악/엔딩크레딧.mp3")  #<-----bgm 전환(2차 커밋)
+        bgm_ending.play(True)
+
         ending_credit_timer.start()
     else:
         if now_angel:
@@ -493,20 +565,6 @@ def ending_credit_rollup():
         ending_credit_timer.start()
 ending_credit_timer.onTimeout=ending_credit_rollup
 
-def complete():
-    sad_timer.stop()
-    hungry_timer.stop()
-    clean_timer.stop()
-    dirty_timer.stop()
-    poop_timer.stop()
-    fruit_timer.stop()
-    lama_motion_timer.stop()
-    background_timer.stop()
-
-    ending.enter()
-    ending_timer.start()
-    angel_timer.start()
-
 #_________________실패 관련_______________#
 def fail():
     lama.setImage("이미지/캐릭터/무덤.png")
@@ -514,14 +572,17 @@ def fail():
     lama.show()
 
     sad_timer.stop()
+    sad_cooltimer.stop()
     hungry_timer.stop()
+    hungry_cooltimer.stop()
     clean_timer.stop()
     dirty_timer.stop()
     poop_timer.stop()
     fruit_timer.stop()
     lama_motion_timer.stop()
-        
+    heart_effect_timer.stop()
     background_timer.stop()
+    bgm_scene1.stop()
 
     gameover.locate(scene1, 0, 0)
     gameover.show()
@@ -529,5 +590,31 @@ def fail():
 def game_over(x, y, action):
     endGame()
 gameover.onMouseAction=game_over
+
+##_________________배경음악(2차 커밋 추가내용)_________________##
+
+bgm_intro=Sound("음악/인트로.mp3")
+def home_onEnter():
+    bgm_intro.play(True)
+home.onEnter=home_onEnter
+
+bgm_scene0=Sound("음악/메뉴.mp3")
+def scene0_onEnter():
+    bgm_intro.stop()
+    bgm_scene0.play(True)
+scene0.onEnter=scene0_onEnter
+
+bgm_level=["음악/무지개시티.mp3","음악/회색시티.mp3","음악/태초마을.mp3"]
+bgm_scene1=Sound(bgm_level[now_level])
+def scene1_onEnter():
+    bgm_scene0.stop()
+    bgm_scene1.play(True)
+scene1.onEnter=scene1_onEnter
+
+bgm_ending=Sound("음악/The End.mp3")
+def ending_onEnter():
+    bgm_scene1.stop()
+    bgm_ending.play(True)
+ending.onEnter=ending_onEnter
 
 startGame(home)
